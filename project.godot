@@ -11,8 +11,15 @@ config_version=5
 [application]
 
 config/name="TacForge"
+run/main_scene="res://hex_map/demo/hex_demo.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+CameraController="*res://ui/camera_controller.gd"
+HexMapEditor="*res://hex_map/hex_map_utilities/hex_map_editor.gd"
+HexPathfinder="*res://hex_map/hex_map_utilities/hex_pathfinder.gd"
 
 [dotnet]
 
