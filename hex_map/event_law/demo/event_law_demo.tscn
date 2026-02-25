@@ -1,0 +1,68 @@
+[gd_scene load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://hex_map/event_law/combat_command_bus.gd" id="1_command_bus"]
+[ext_resource type="Script" path="res://hex_map/event_law/gameplay_event_bus.gd" id="2_gameplay_bus"]
+[ext_resource type="Script" path="res://hex_map/event_law/presentation/ui_event_bus.gd" id="3_ui_bus"]
+[ext_resource type="Script" path="res://hex_map/event_law/presentation/audio_event_bus.gd" id="4_audio_bus"]
+[ext_resource type="Script" path="res://hex_map/event_law/presentation/camera_event_bus.gd" id="5_camera_bus"]
+[ext_resource type="Script" path="res://hex_map/event_law/presentation/vfx_event_bus.gd" id="6_vfx_bus"]
+[ext_resource type="Script" path="res://hex_map/event_law/event_projection_coordinator.gd" id="7_projection"]
+[ext_resource type="Script" path="res://hex_map/event_law/spell_hit_resolver_example.gd" id="8_resolver"]
+[ext_resource type="Script" path="res://hex_map/event_law/demo/fake_health_authority.gd" id="9_health"]
+[ext_resource type="Script" path="res://hex_map/event_law/demo/event_law_demo_observer.gd" id="10_observer"]
+[ext_resource type="Script" path="res://hex_map/event_law/demo/event_law_demo_bootstrap.gd" id="11_bootstrap"]
+[ext_resource type="Script" path="res://hex_map/event_law/demo/event_law_demo_runner.gd" id="12_runner"]
+
+[node name="EventLawDemo" type="Node"]
+
+[node name="CombatCommandBus" type="Node" parent="."]
+script = ExtResource("1_command_bus")
+
+[node name="GameplayEventBus" type="Node" parent="."]
+script = ExtResource("2_gameplay_bus")
+
+[node name="UIEventBus" type="Node" parent="."]
+script = ExtResource("3_ui_bus")
+
+[node name="AudioEventBus" type="Node" parent="."]
+script = ExtResource("4_audio_bus")
+
+[node name="CameraEventBus" type="Node" parent="."]
+script = ExtResource("5_camera_bus")
+
+[node name="VfxEventBus" type="Node" parent="."]
+script = ExtResource("6_vfx_bus")
+
+[node name="SpellHitResolverExample" type="Node" parent="."]
+script = ExtResource("8_resolver")
+combat_command_bus_path = NodePath("../CombatCommandBus")
+gameplay_event_bus_path = NodePath("../GameplayEventBus")
+
+[node name="EventProjectionCoordinator" type="Node" parent="."]
+script = ExtResource("7_projection")
+gameplay_event_bus_path = NodePath("../GameplayEventBus")
+ui_event_bus_path = NodePath("../UIEventBus")
+audio_event_bus_path = NodePath("../AudioEventBus")
+camera_event_bus_path = NodePath("../CameraEventBus")
+vfx_event_bus_path = NodePath("../VfxEventBus")
+
+[node name="FakeHealthAuthority" type="Node" parent="."]
+script = ExtResource("9_health")
+
+[node name="EventLawDemoBootstrap" type="Node" parent="."]
+script = ExtResource("11_bootstrap")
+spell_hit_resolver_path = NodePath("../SpellHitResolverExample")
+health_authority_path = NodePath("../FakeHealthAuthority")
+
+[node name="EventLawDemoObserver" type="Node" parent="."]
+script = ExtResource("10_observer")
+gameplay_event_bus_path = NodePath("../GameplayEventBus")
+ui_event_bus_path = NodePath("../UIEventBus")
+audio_event_bus_path = NodePath("../AudioEventBus")
+camera_event_bus_path = NodePath("../CameraEventBus")
+vfx_event_bus_path = NodePath("../VfxEventBus")
+
+[node name="EventLawDemoRunner" type="Node" parent="."]
+script = ExtResource("12_runner")
+combat_command_bus_path = NodePath("../CombatCommandBus")
+spell_hit_resolver_path = NodePath("../SpellHitResolverExample")

@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="MapConfigSchema" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://hex_map/config/map_config_schema.gd" id="1_map_cfg"]
+
+[resource]
+script = ExtResource("1_map_cfg")
