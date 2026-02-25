@@ -16,13 +16,13 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = false
 
-	if not HexSignalManager.hex_hovered.is_connected(_on_hex_hovered):
-		HexSignalManager.hex_hovered.connect(_on_hex_hovered)
+	if not HexInteractionBus.hex_hovered.is_connected(_on_hex_hovered):
+		HexInteractionBus.hex_hovered.connect(_on_hex_hovered)
 
 
 func _process(_delta: float) -> void:
 	if visible:
-		global_position = get_global_mouse_position() + _tooltip_offset
+		_update_tooltip_position()
 
 
 func _on_hex_hovered(key: Vector3i) -> void:
@@ -31,6 +31,7 @@ func _on_hex_hovered(key: Vector3i) -> void:
 		visible = false
 		return
 
+	_update_tooltip_position()
 	visible = true
 	coord_label.text = "Hex: %d, %d" % [key.x, key.y]
 
@@ -55,3 +56,7 @@ func _on_hex_hovered(key: Vector3i) -> void:
 			cost_label.text = "Cost: 1"
 			modulate = Color.WHITE
 			impassable_icon.visible = false
+
+
+func _update_tooltip_position() -> void:
+	global_position = get_global_mouse_position() + _tooltip_offset

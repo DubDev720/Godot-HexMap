@@ -20,14 +20,12 @@ var _focus_world_position: Vector3 = Vector3.ZERO
 
 
 func _ready() -> void:
-	print("[HexInputController] _ready called")
 	_find_camera()
 
 
 func _find_camera() -> void:
 	if camera == null:
 		camera = get_viewport().get_camera_3d()
-		print("[HexInputController] camera found: ", camera)
 
 
 func _process(_delta: float) -> void:
@@ -40,8 +38,11 @@ func _process(_delta: float) -> void:
 		_last_hovered_key = current_key
 		hovered_hex_key = current_key
 		hovered_changed.emit(current_key)
-		print("[HexInputController] emitting hex_hovered: ", current_key)
-		HexSignalManager.emit_hex_hovered(current_key)
+		var command_bus = get_tree().get_first_node_in_group("hex_runtime_command_bus")
+		if command_bus != null and command_bus.has_method("request_hover_hex"):
+			command_bus.request_hover_hex(current_key)
+		else:
+			HexInteractionBus.emit_hex_hovered(current_key)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -51,7 +52,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		var selected_key = _get_hex_at_mouse(event.position)
 		selected_hex_key = selected_key
 		selection_changed.emit(selected_key)
-		HexSignalManager.emit_hex_selected(selected_key)
+		var command_bus = get_tree().get_first_node_in_group("hex_runtime_command_bus")
+		if command_bus != null and command_bus.has_method("request_select_hex"):
+			command_bus.request_select_hex(selected_key)
+		else:
+			HexInteractionBus.emit_hex_selected(selected_key)
 
 
 func _get_hex_at_mouse(screen_pos: Vector2) -> Vector3i:
@@ -72,19 +77,19 @@ func _get_hex_at_mouse(screen_pos: Vector2) -> Vector3i:
 func _handle_camera_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_Q:
-			HexSignalManager.emit_camera_rotation_requested(1)
+			HexCameraBus.emit_camera_rotation_requested(1)
 		elif event.keycode == KEY_E:
-			HexSignalManager.emit_camera_rotation_requested(-1)
+			HexCameraBus.emit_camera_rotation_requested(-1)
 		elif event.keycode == KEY_Z:
-			HexSignalManager.emit_camera_zoom_requested(true)
+			HexCameraBus.emit_camera_zoom_requested(true)
 		elif event.keycode == KEY_X:
-			HexSignalManager.emit_camera_zoom_requested(false)
+			HexCameraBus.emit_camera_zoom_requested(false)
 	
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			HexSignalManager.emit_camera_zoom_requested(true)
+			HexCameraBus.emit_camera_zoom_requested(true)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			HexSignalManager.emit_camera_zoom_requested(false)
+			HexCameraBus.emit_camera_zoom_requested(false)
 
 
 func update_focus_position(focus_pos: Vector3, map_points: PackedVector3Array) -> void:

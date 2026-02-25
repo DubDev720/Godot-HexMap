@@ -1,7 +1,7 @@
 extends Control
 class_name InspectHUD
 ## Purpose/Goal: Displays hover metadata and coordinate information.
-## Design Pattern/Principle: UI component listening to HexSignalManager for hover feedback.
+## Design Pattern/Principle: UI component listening to interaction-domain signals for hover feedback.
 ## Timestamp: 2026-02-24 03:00:00 UTC
 
 @onready var coord_label: Label = $MarginContainer/VBoxContainer/CoordLabel
@@ -12,8 +12,8 @@ class_name InspectHUD
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	
-	if not HexSignalManager.hex_hovered.is_connected(_on_hex_hovered):
-		HexSignalManager.hex_hovered.connect(_on_hex_hovered)
+	if not HexInteractionBus.hex_hovered.is_connected(_on_hex_hovered):
+		HexInteractionBus.hex_hovered.connect(_on_hex_hovered)
 	
 	visible = false
 

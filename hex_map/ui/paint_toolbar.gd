@@ -13,6 +13,7 @@ var _selected_tile_id: int = 0
 var _current_tool: int = 0
 var _line_start_key: Vector3i = Vector3i.ZERO
 var _is_line_mode: bool = false
+var _interaction_mode: int = HexModeBus.MODE_INSPECT
 
 const TOOL_SINGLE: int = 0
 const TOOL_LINE: int = 1
@@ -26,13 +27,18 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
-	if HexSignalManager.hex_hovered.is_connected(_on_hex_hovered):
-		HexSignalManager.hex_hovered.disconnect(_on_hex_hovered)
-	HexSignalManager.hex_hovered.connect(_on_hex_hovered)
+	if HexInteractionBus.hex_hovered.is_connected(_on_hex_hovered):
+		HexInteractionBus.hex_hovered.disconnect(_on_hex_hovered)
+	HexInteractionBus.hex_hovered.connect(_on_hex_hovered)
 	
-	if HexSignalManager.hex_selected.is_connected(_on_hex_selected):
-		HexSignalManager.hex_selected.disconnect(_on_hex_selected)
-	HexSignalManager.hex_selected.connect(_on_hex_selected)
+	if HexInteractionBus.hex_selected.is_connected(_on_hex_selected):
+		HexInteractionBus.hex_selected.disconnect(_on_hex_selected)
+	HexInteractionBus.hex_selected.connect(_on_hex_selected)
+
+	if HexModeBus.interaction_mode_changed.is_connected(_on_interaction_mode_changed):
+		HexModeBus.interaction_mode_changed.disconnect(_on_interaction_mode_changed)
+	HexModeBus.interaction_mode_changed.connect(_on_interaction_mode_changed)
+	_on_interaction_mode_changed(HexModeBus.get_current_mode())
 
 
 func _build_tool_buttons() -> void:
@@ -112,6 +118,8 @@ func _on_tool_toggled(tool: int, toggled_on: bool) -> void:
 
 
 func _on_hex_hovered(key: Vector3i) -> void:
+	if _interaction_mode != HexModeBus.MODE_PAINT:
+		return
 	if not _is_line_mode:
 		return
 	if _line_start_key == Vector3i.ZERO:
@@ -123,6 +131,8 @@ func _on_hex_hovered(key: Vector3i) -> void:
 
 
 func _on_hex_selected(key: Vector3i) -> void:
+	if _interaction_mode != HexModeBus.MODE_PAINT:
+		return
 	var hex_map = HexMapEditor.get_hex_map()
 	if hex_map == null:
 		return
@@ -136,7 +146,7 @@ func _on_hex_selected(key: Vector3i) -> void:
 			_line_start_key = Vector3i.ZERO
 			brush_preview.text = "Line Mode - Click start hex"
 	else:
-		HexMapEditor.apply_edit_brush(key)
+		_request_map_edit(key)
 
 
 func _paint_line(start_key: Vector3i, end_key: Vector3i) -> void:
@@ -152,6 +162,16 @@ func _paint_line(start_key: Vector3i, end_key: Vector3i) -> void:
 	for h in line_hexes:
 		var key = hex_map.hex_to_key(h)
 		if hex_map.is_key_inside_radius(key):
-			HexMapEditor.apply_edit_brush(key)
-	
-	HexSignalManager.emit_hex_map_changed(hex_map)
+			_request_map_edit(key)
+
+
+func _on_interaction_mode_changed(mode: int) -> void:
+	_interaction_mode = mode
+
+
+func _request_map_edit(key: Vector3i) -> void:
+	var command_bus = get_tree().get_first_node_in_group("hex_runtime_command_bus")
+	if command_bus != null and command_bus.has_method("request_map_edit"):
+		command_bus.request_map_edit(key)
+		return
+	HexMapEditor.apply_edit_brush(key)

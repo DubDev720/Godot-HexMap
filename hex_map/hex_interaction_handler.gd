@@ -1,5 +1,5 @@
 extends Node
-## Purpose/Goal: Maps screen input to hex keys and broadcasts via HexSignalManager.
+## Purpose/Goal: Maps screen input to hex keys and broadcasts via interaction bus.
 ## Design Pattern/Principle: Input handler with loose coupling via signal bus.
 ## Timestamp: 2026-02-24 00:00:00 UTC
 
@@ -15,13 +15,13 @@ func _process(_delta: float) -> void:
 	var current_key = _get_key_under_mouse()
 	if current_key != _last_hovered_key:
 		_last_hovered_key = current_key
-		HexSignalManager.emit_hex_hovered(current_key)
+		HexInteractionBus.emit_hex_hovered(current_key)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var selected_key = _get_key_under_mouse()
-		HexSignalManager.emit_hex_selected(selected_key)
+		HexInteractionBus.emit_hex_selected(selected_key)
 
 
 func _get_key_under_mouse() -> Vector3i:

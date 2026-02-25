@@ -13,12 +13,8 @@ const DEMO_CONFIG: DemoConfig = preload("res://hex_map/demo/demo_config.tres")
 signal zoom_step_is_requested(zoom_in_is_requested: bool)
 signal map_configure_is_requested(layout: HexLib.Layout, radius: int, blank_coords: Array[Vector3i], obstacle_coords: Array[Vector3i], tier_height: float)
 signal map_edit_brush_set_is_requested(brush: int)
-signal map_edit_is_requested(key: Vector3i)
-enum DemoMode {
-	INSPECT,
-	PATHFINDING,
-	MAP_EDIT,
-}
+signal runtime_interface_setup_is_requested(scene_root: Node, demo_config: DemoConfig)
+signal editor_tool_interface_setup_is_requested(scene_root: Node, demo_config: DemoConfig)
 
 enum EditBrush {
 	TOGGLE_OBSTACLE,
@@ -43,7 +39,7 @@ var _focus_world_position: Vector3 = Vector3.ZERO
 var _focus_hex_key: Vector3i = Vector3i.ZERO
 var _hex_map = null
 var _layout = null
-var _mode: int = DemoMode.INSPECT
+var _mode: int = HexModeBus.MODE_INSPECT
 var _edit_brush: int = EditBrush.TOGGLE_OBSTACLE
 var _label_mode: int = LabelMode.CUBE
 var _controls_layer: CanvasLayer = null
@@ -59,42 +55,47 @@ var _panel_drag_is_candidate: bool = false
 var _panel_drag_press_mouse: Vector2 = Vector2.ZERO
 var _panel_anchor_is_hidden_bottom: bool = false
 var _map_world_points: PackedVector3Array = PackedVector3Array()
-var _interaction_handler: Node = null
 var _selection_tooltip: Control = null
-var _paint_toolbar: Control = null
+var _runtime_ui_manager: Control = null
 var _map_renderer: Node3D = null
 var _highlight_manager: Node3D = null
 var _input_controller: Node3D = null
 var _logic_service: Node = null
 
 const SelectionTooltipScene = preload("res://hex_map/ui/selection_tooltip.tscn")
-const PaintToolbarScene = preload("res://hex_map/ui/paint_toolbar.tscn")
-const HexInteractionHandlerScript = preload("res://hex_map/hex_interaction_handler.gd")
+const HexUIManagerScene = preload("res://hex_map/ui/hex_ui_manager.tscn")
 const HexMapRendererScript = preload("res://hex_map/hex_map_renderer_3d.gd")
 const HexHighlightManagerScript = preload("res://hex_map/hex_highlight_manager.gd")
 const HexInputControllerScript = preload("res://hex_map/hex_input_controller.gd")
 const HexMapLogicServiceScript = preload("res://hex_map/hex_map_logic_service.gd")
+const HexRuntimeCommandBusScript = preload("res://hex_map/event_law/hex_runtime_command_bus.gd")
+const HexRuntimeEventBusScript = preload("res://hex_map/event_law/hex_runtime_event_bus.gd")
+const HexRuntimeStateServiceScript = preload("res://hex_map/event_law/hex_runtime_state_service.gd")
+const HexRuntimeProjectionCoordinatorScript = preload("res://hex_map/event_law/hex_runtime_projection_coordinator.gd")
+const MapConfigSchemaScript = preload("res://hex_map/config/map_config_schema.gd")
+
+var _runtime_command_bus: Node = null
+var _runtime_event_bus: Node = null
+var _runtime_state_service: Node = null
+var _runtime_projection_coordinator: Node = null
 
 
 func _ready() -> void:
 	_fit_window_to_screen()
 	map_configure_is_requested.connect(HexMapEditor.configure_hex_map)
 	map_edit_brush_set_is_requested.connect(HexMapEditor.set_edit_brush)
-	map_edit_is_requested.connect(HexMapEditor.apply_edit_brush)
 	HexMapEditor.hex_map_changed.connect(_on_hex_map_changed)
 	HexMapEditor.edit_brush_changed.connect(_on_edit_brush_changed)
 	emit_signal("map_edit_brush_set_is_requested", _edit_brush)
+	_set_mode(_mode)
 	_rebuild_topology_sets()
 	_spawn_camera_if_missing()
 	_spawn_light_if_missing()
 	zoom_step_is_requested.connect(_on_zoom_step_is_requested)
 	_ensure_controls_panel()
-	_ensure_selection_tooltip()
-	_ensure_paint_toolbar()
-	_ensure_map_renderer()
-	_ensure_highlight_manager()
-	_ensure_input_controller()
-	_ensure_logic_service()
+	_configure_interface_ownership()
+	_ensure_scene_systems_from_config()
+	_refresh_runtime_system_snapshots()
 	_refresh_controls_panel()
 
 
@@ -123,20 +124,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			emit_signal("zoom_step_is_requested", false)
 			_refresh_controls_panel()
 			return
-
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		if _mode == DemoMode.MAP_EDIT:
-			var edit_key = _get_hex_under_mouse(event.position)
-			if edit_key != null:
-				_apply_edit_brush(edit_key)
-				_refresh_controls_panel()
-			return
-
-		if _mode == DemoMode.PATHFINDING:
-			var picked = _get_hex_under_mouse(event.position)
-			if picked != null:
-				_refresh_controls_panel()
-
 
 func _input(event: InputEvent) -> void:
 	if _controls_root == null or _controls_panel == null or not _controls_panel.visible:
@@ -190,20 +177,24 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			return
 
 		if event.keycode == KEY_TAB:
-			_set_mode((_mode + 1) % DemoMode.size())
+			var tab_modes := _mode_tab_values()
+			var current_index := tab_modes.find(_mode)
+			if current_index < 0:
+				current_index = 0
+			_set_mode(tab_modes[(current_index + 1) % tab_modes.size()])
 			_refresh_controls_panel()
 			return
 
 		if event.keycode == KEY_1:
-			_set_mode(DemoMode.INSPECT)
+			_set_mode(HexModeBus.MODE_INSPECT)
 			_refresh_controls_panel()
 			return
 		if event.keycode == KEY_2:
-			_set_mode(DemoMode.PATHFINDING)
+			_set_mode(HexModeBus.MODE_TACTICS)
 			_refresh_controls_panel()
 			return
 		if event.keycode == KEY_3:
-			_set_mode(DemoMode.MAP_EDIT)
+			_set_mode(HexModeBus.MODE_PAINT)
 			_refresh_controls_panel()
 			return
 
@@ -229,7 +220,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_refresh_controls_panel()
 			return
 
-		if _mode == DemoMode.MAP_EDIT:
+		if _mode == HexModeBus.MODE_PAINT:
 			if event.keycode == KEY_O:
 				emit_signal("map_edit_brush_set_is_requested", HexMapEditor.EDIT_BRUSH_TOGGLE_OBSTACLE)
 			elif event.keycode == KEY_R:
@@ -250,18 +241,20 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_C:
 			pass
 
-		_refresh_controls_panel()
+		if event.keycode != KEY_Q and event.keycode != KEY_E:
+			_refresh_controls_panel()
 
 
 func _rebuild_topology_sets() -> void:
+	var map_config = DEMO_CONFIG.map_config if DEMO_CONFIG.map_config != null else MapConfigSchemaScript.new()
 	if _layout == null:
 		var orientation = HexLibScript.orientation_flat()
 		_layout = HexLibScript.Layout.new(
 			orientation,
-			Vector2(DEMO_CONFIG.hex_size, DEMO_CONFIG.hex_size),
+			Vector2(map_config.hex_size, map_config.hex_size),
 			Vector2.ZERO
 		)
-	emit_signal("map_configure_is_requested", _layout, DEMO_CONFIG.demo_radius, DEMO_CONFIG.blank_coords, DEMO_CONFIG.obstacle_coords, DEMO_CONFIG.tier_height)
+	emit_signal("map_configure_is_requested", _layout, map_config.demo_radius, map_config.blank_coords, map_config.obstacle_coords, map_config.tier_height)
 
 
 func _build_demo_tiles() -> void:
@@ -271,7 +264,8 @@ func _build_demo_tiles() -> void:
 	_map_world_points = _hex_map.get_world_points()
 
 	if _highlight_manager != null and _highlight_manager.has_method("configure"):
-		_highlight_manager.configure(_layout, DEMO_CONFIG.tile_height)
+		var map_config = DEMO_CONFIG.map_config if DEMO_CONFIG.map_config != null else MapConfigSchemaScript.new()
+		_highlight_manager.configure(_layout, map_config.tile_height)
 
 	_refresh_controls_panel()
 
@@ -280,27 +274,6 @@ func _build_demo_tiles() -> void:
 
 
 
-
-
-func _apply_edit_brush(key: Vector3i) -> void:
-	if _hex_map == null or not _hex_map.is_key_inside_radius(key):
-		return
-	emit_signal("map_edit_is_requested", key)
-
-
-func _get_hex_under_mouse(screen_pos: Vector2) -> Vector3i:
-	if _layout == null or not has_node("Camera3D"):
-		return Vector3i(-999, -999, -999)
-
-	var camera := get_node("Camera3D") as Camera3D
-	var ray_origin := camera.project_ray_origin(screen_pos)
-	var ray_dir := camera.project_ray_normal(screen_pos)
-	var hit = Plane.PLANE_XZ.intersects_ray(ray_origin, ray_dir)
-	if hit == null or not (hit is Vector3):
-		return Vector3i(-999, -999, -999)
-
-	var world_pos: Vector3 = hit
-	return _hex_map.local_to_map(world_pos)
 
 
 func _label_text_for_key(key: Vector3i) -> String:
@@ -384,13 +357,13 @@ func _ensure_controls_panel() -> void:
 	_mode_tabs_row.mouse_filter = Control.MOUSE_FILTER_PASS
 	vbox.add_child(_mode_tabs_row)
 	_mode_tab_buttons.clear()
-	for i in range(DemoMode.size()):
+	for mode_value in _mode_tab_values():
 		var tab_button := Button.new()
 		tab_button.custom_minimum_size = DEMO_CONFIG.mode_tab_button_size
 		tab_button.focus_mode = Control.FOCUS_NONE
 		tab_button.add_theme_font_size_override("font_size", DEMO_CONFIG.panel_button_text_size)
-		tab_button.text = _mode_name(i)
-		tab_button.pressed.connect(_on_mode_tab_pressed.bind(i))
+		tab_button.text = _mode_name(mode_value)
+		tab_button.pressed.connect(_on_mode_tab_pressed.bind(mode_value))
 		_mode_tabs_row.add_child(tab_button)
 		_mode_tab_buttons.append(tab_button)
 
@@ -460,7 +433,11 @@ func _on_mode_tab_pressed(mode_value: int) -> void:
 
 
 func _set_mode(mode_value: int) -> void:
-	_mode = clampi(mode_value, 0, DemoMode.size() - 1)
+	var tab_modes := _mode_tab_values()
+	if not tab_modes.has(mode_value):
+		mode_value = HexModeBus.MODE_INSPECT
+	_mode = mode_value
+	HexModeBus.emit_interaction_mode_changed(_mode)
 
 
 func _refresh_controls_panel() -> void:
@@ -486,16 +463,16 @@ func _refresh_controls_panel() -> void:
 	lines.append("------------------------------")
 	lines.append("[Tab] Cycle mode | [1] Inspect [2] Path [3] Edit")
 	match _mode:
-		DemoMode.INSPECT:
+		HexModeBus.MODE_INSPECT:
 			lines.append("Inspect: hover to see tooltip")
 			lines.append("Shortcut Keys: [L] labels")
 			lines.append(DEMO_CONFIG.rotate_controls_hint)
 			lines.append(DEMO_CONFIG.pan_controls_hint)
-		DemoMode.PATHFINDING:
+		HexModeBus.MODE_TACTICS:
 			lines.append("Pathfinding: use Tactics HUD")
 			lines.append(DEMO_CONFIG.rotate_controls_hint)
 			lines.append(DEMO_CONFIG.pan_controls_hint)
-		DemoMode.MAP_EDIT:
+		HexModeBus.MODE_PAINT:
 			lines.append("Map Edit: [A] add | [R] remove | [O] obstacle")
 			lines.append("Apply brush with left-click")
 			lines.append("Current Brush: %s" % brush_name)
@@ -507,7 +484,9 @@ func _refresh_controls_panel() -> void:
 
 	for i in range(_mode_tab_buttons.size()):
 		var btn := _mode_tab_buttons[i]
-		_apply_mode_tab_style(btn, i == _mode)
+		var mode_values := _mode_tab_values()
+		var mode_value := mode_values[i] if i < mode_values.size() else HexModeBus.MODE_INSPECT
+		_apply_mode_tab_style(btn, mode_value == _mode)
 	_clamp_controls_root_to_screen()
 
 
@@ -559,14 +538,29 @@ func _apply_mode_tab_style(button: Button, is_active: bool) -> void:
 
 func _mode_name(mode_value: int) -> String:
 	match mode_value:
-		DemoMode.INSPECT:
+		HexModeBus.MODE_INSPECT:
 			return "INSPECT"
-		DemoMode.PATHFINDING:
+		HexModeBus.MODE_TACTICS:
 			return "PATHFINDING"
-		DemoMode.MAP_EDIT:
+		HexModeBus.MODE_PAINT:
 			return "MAP EDIT"
 		_:
 			return "UNKNOWN"
+
+
+func _mode_tab_values() -> Array[int]:
+	return [
+		HexModeBus.MODE_INSPECT,
+		HexModeBus.MODE_TACTICS,
+		HexModeBus.MODE_PAINT,
+	]
+
+
+func _refresh_runtime_system_snapshots() -> void:
+	var current_map: HexMap = HexMapEditor.get_hex_map()
+	if current_map != null:
+		HexMapBus.emit_hex_map_changed(current_map)
+	HexModeBus.emit_interaction_mode_changed(_mode)
 
 
 func _edit_brush_name(brush: int) -> String:
@@ -643,15 +637,6 @@ func _spawn_light_if_missing() -> void:
 	add_child(light)
 
 
-func _ensure_interaction_handler() -> void:
-	if _interaction_handler != null:
-		return
-	_interaction_handler = Node.new()
-	_interaction_handler.name = "HexInteractionHandler"
-	_interaction_handler.set_script(HexInteractionHandlerScript)
-	add_child(_interaction_handler)
-
-
 func _ensure_selection_tooltip() -> void:
 	if _selection_tooltip != null:
 		return
@@ -659,12 +644,12 @@ func _ensure_selection_tooltip() -> void:
 	add_child(_selection_tooltip)
 
 
-func _ensure_paint_toolbar() -> void:
-	if _paint_toolbar != null:
+func _ensure_runtime_ui_manager() -> void:
+	if _runtime_ui_manager != null:
 		return
-	_paint_toolbar = PaintToolbarScene.instantiate()
-	_paint_toolbar.position = Vector2(20, 20)
-	add_child(_paint_toolbar)
+	_runtime_ui_manager = HexUIManagerScene.instantiate()
+	_runtime_ui_manager.name = "HexUIManager"
+	add_child(_runtime_ui_manager)
 
 
 func _ensure_map_renderer() -> void:
@@ -684,7 +669,8 @@ func _ensure_highlight_manager() -> void:
 	_highlight_manager.set_script(HexHighlightManagerScript)
 	add_child(_highlight_manager)
 	if _highlight_manager.has_method("configure"):
-		_highlight_manager.configure(_layout, DEMO_CONFIG.tile_height)
+		var map_config = DEMO_CONFIG.map_config if DEMO_CONFIG.map_config != null else MapConfigSchemaScript.new()
+		_highlight_manager.configure(_layout, map_config.tile_height)
 
 
 func _ensure_input_controller() -> void:
@@ -702,4 +688,61 @@ func _ensure_logic_service() -> void:
 	_logic_service = Node.new()
 	_logic_service.name = "HexMapLogicService"
 	_logic_service.set_script(HexMapLogicServiceScript)
+	_logic_service.add_to_group("logic_service")
 	add_child(_logic_service)
+
+
+func _ensure_runtime_command_pipeline() -> void:
+	if _runtime_command_bus != null and _runtime_event_bus != null and _runtime_state_service != null and _runtime_projection_coordinator != null:
+		return
+
+	_runtime_command_bus = Node.new()
+	_runtime_command_bus.name = "HexRuntimeCommandBus"
+	_runtime_command_bus.set_script(HexRuntimeCommandBusScript)
+	add_child(_runtime_command_bus)
+
+	_runtime_event_bus = Node.new()
+	_runtime_event_bus.name = "HexRuntimeEventBus"
+	_runtime_event_bus.set_script(HexRuntimeEventBusScript)
+	add_child(_runtime_event_bus)
+
+	_runtime_state_service = Node.new()
+	_runtime_state_service.name = "HexRuntimeStateService"
+	_runtime_state_service.set_script(HexRuntimeStateServiceScript)
+	_runtime_state_service.command_bus_path = _runtime_command_bus.get_path()
+	_runtime_state_service.event_bus_path = _runtime_event_bus.get_path()
+	add_child(_runtime_state_service)
+
+	_runtime_projection_coordinator = Node.new()
+	_runtime_projection_coordinator.name = "HexRuntimeProjectionCoordinator"
+	_runtime_projection_coordinator.set_script(HexRuntimeProjectionCoordinatorScript)
+	_runtime_projection_coordinator.event_bus_path = _runtime_event_bus.get_path()
+	add_child(_runtime_projection_coordinator)
+
+
+func _configure_interface_ownership() -> void:
+	if Engine.is_editor_hint():
+		if DEMO_CONFIG.editor_tool_interface_is_enabled:
+			editor_tool_interface_setup_is_requested.emit(self, DEMO_CONFIG)
+		return
+
+	if DEMO_CONFIG.runtime_interface_is_enabled:
+		runtime_interface_setup_is_requested.emit(self, DEMO_CONFIG)
+
+
+func _ensure_scene_systems_from_config() -> void:
+	var runtime_is_active := not Engine.is_editor_hint()
+	if runtime_is_active and DEMO_CONFIG.runtime_command_pipeline_is_enabled:
+		_ensure_runtime_command_pipeline()
+	if runtime_is_active and DEMO_CONFIG.selection_tooltip_is_enabled:
+		_ensure_selection_tooltip()
+	if runtime_is_active and DEMO_CONFIG.runtime_ui_manager_is_enabled:
+		_ensure_runtime_ui_manager()
+	if DEMO_CONFIG.map_renderer_is_enabled:
+		_ensure_map_renderer()
+	if DEMO_CONFIG.highlight_manager_is_enabled:
+		_ensure_highlight_manager()
+	if runtime_is_active and DEMO_CONFIG.input_controller_is_enabled:
+		_ensure_input_controller()
+	if runtime_is_active and DEMO_CONFIG.logic_service_is_enabled:
+		_ensure_logic_service()

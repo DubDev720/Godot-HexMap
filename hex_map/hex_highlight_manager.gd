@@ -2,7 +2,9 @@ extends Node3D
 class_name HexHighlightManager
 ## Purpose/Goal: Centralizes selection rings and path ribbon rendering.
 ## Design Pattern/Principle: Reacts to signals to provide visual feedback for interaction and tactics.
-## Timestamp: 2026-02-24 02:00:00 UTC
+## Timestamp: 2026-02-25 00:00:00 EST
+
+const DemoConfigResource: DemoConfig = preload("res://hex_map/demo/demo_config.tres")
 
 @export var selection_color: Color = Color(1.0, 0.95, 0.2, 0.45)
 @export var path_color: Color = Color(1.0, 0.93, 0.08, 0.95)
@@ -10,16 +12,16 @@ class_name HexHighlightManager
 
 var _highlight_ring: MeshInstance3D = null
 var _path_ribbon: MeshInstance3D = null
-var _inspect_tooltip: Label3D = null
 var _layout: HexLib.Layout = null
 var _tile_height: float = 0.25
 var _path_line_y_offset: float = 0.195
-var _selected_key: Vector3i = Vector3i(-999, -999, -999)
 
 
 func _ready() -> void:
+	if DemoConfigResource.pathfinding_config != null:
+		path_color = DemoConfigResource.pathfinding_config.path_line_color
+		path_line_width = DemoConfigResource.pathfinding_config.path_line_width
 	_setup_visual_nodes()
-	_setup_inspect_tooltip()
 	_connect_signals()
 
 
@@ -46,28 +48,20 @@ func _setup_visual_nodes() -> void:
 	add_child(_path_ribbon)
 
 
-func _setup_inspect_tooltip() -> void:
-	_inspect_tooltip = Label3D.new()
-	_inspect_tooltip.name = "InspectTooltip"
-	_inspect_tooltip.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_inspect_tooltip.no_depth_test = true
-	_inspect_tooltip.outline_size = 8
-	_inspect_tooltip.outline_modulate = Color(0.03, 0.03, 0.03, 1.0)
-	_inspect_tooltip.font_size = 42
-	_inspect_tooltip.visible = false
-	add_child(_inspect_tooltip)
-
-
 func _connect_signals() -> void:
-	if not HexSignalManager.hex_hovered.is_connected(_on_hex_hovered):
-		HexSignalManager.hex_hovered.connect(_on_hex_hovered)
+	if not HexInteractionBus.hex_hovered.is_connected(_on_hex_hovered):
+		HexInteractionBus.hex_hovered.connect(_on_hex_hovered)
 	
-	if not HexSignalManager.hex_selected.is_connected(_on_hex_selected):
-		HexSignalManager.hex_selected.connect(_on_hex_selected)
+	if not HexInteractionBus.hex_selected.is_connected(_on_hex_selected):
+		HexInteractionBus.hex_selected.connect(_on_hex_selected)
 	
 	if HexPathfinder.path_result_ready.is_connected(_on_path_ready):
 		HexPathfinder.path_result_ready.disconnect(_on_path_ready)
 	HexPathfinder.path_result_ready.connect(_on_path_ready)
+
+	if HexModeBus.interaction_mode_changed.is_connected(_on_mode_changed):
+		HexModeBus.interaction_mode_changed.disconnect(_on_mode_changed)
+	HexModeBus.interaction_mode_changed.connect(_on_mode_changed)
 
 
 func configure(layout: HexLib.Layout, tile_height: float) -> void:
@@ -118,8 +112,8 @@ func _on_hex_hovered(key: Vector3i) -> void:
 	_highlight_ring.global_position = map.key_to_world(key) + Vector3(0, _tile_height * 0.62, 0)
 
 
-func _on_hex_selected(key: Vector3i) -> void:
-	update_inspect_tooltip(key)
+func _on_hex_selected(_key: Vector3i) -> void:
+	pass
 
 
 func _on_path_ready(_start, _goal, result: Dictionary) -> void:
@@ -180,37 +174,6 @@ func clear_selection() -> void:
 	_highlight_ring.visible = false
 
 
-func update_inspect_tooltip(key: Vector3i) -> void:
-	_selected_key = key
-	var map = HexMapEditor.get_hex_map()
-	if _inspect_tooltip == null:
-		return
-	if key == Vector3i(-999, -999, -999) or map == null or not map.has_cell(key):
-		_inspect_tooltip.visible = false
-		return
-	
-	var details = _get_inspect_details(key)
-	_inspect_tooltip.text = "\n".join(details)
-	_inspect_tooltip.position = map.key_to_world(key) + Vector3(0, _tile_height * 0.85 + 0.35, 0)
-	_inspect_tooltip.modulate = Color(0.08, 0.08, 0.08, 1.0)
-	_inspect_tooltip.visible = true
-
-
-func _get_inspect_details(key: Vector3i) -> PackedStringArray:
-	var lines: PackedStringArray = []
-	var map = HexMapEditor.get_hex_map()
-	if map == null:
-		return lines
-	
-	var h = map.key_to_hex(key)
-	var dist = HexLib.hex_distance(h, HexLib.Hex.new(0, 0, 0))
-	var is_walkable = map.is_walkable(key)
-	var is_obstacle = map.is_cell_obstacle(key)
-	
-	lines.append("Inspect: q:%d r:%d s:%d" % [key.x, key.y, key.z])
-	lines.append("Axial: q:%d r:%d | dist center: %d" % [key.x, key.y, dist])
-	lines.append("Walkable: %s | Obstacle: %s" % [
-		"yes" if is_walkable else "no",
-		"yes" if is_obstacle else "no",
-	])
-	return lines
+func _on_mode_changed(new_mode: int) -> void:
+	if new_mode != HexModeBus.MODE_TACTICS:
+		clear_path()

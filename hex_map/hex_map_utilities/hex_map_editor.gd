@@ -20,7 +20,7 @@ signal paint_id_changed(paint_id: int)
 var _hex_map: HexMap = null
 var _edit_brush: int = EDIT_BRUSH_TOGGLE_OBSTACLE
 var _current_paint_id: int = 0
-var _collision_enabled: bool = false
+var _collision_is_enabled: bool = false
 
 
 func configure_hex_map(
@@ -34,7 +34,7 @@ func configure_hex_map(
 		_hex_map = HexMapScript.new()
 	_hex_map.configure(layout, radius, blank_coords, obstacle_coords, tier_height)
 	hex_map_changed.emit(_hex_map)
-	HexSignalManager.emit_hex_map_changed(_hex_map)
+	HexMapBus.emit_hex_map_changed(_hex_map)
 
 
 func get_hex_map() -> HexMap:
@@ -60,11 +60,11 @@ func get_paint_id() -> int:
 
 
 func set_collision_enabled(enabled: bool) -> void:
-	_collision_enabled = enabled
+	_collision_is_enabled = enabled
 
 
 func is_collision_enabled() -> bool:
-	return _collision_enabled
+	return _collision_is_enabled
 
 
 func apply_edit_brush(key: Vector3i) -> void:
@@ -82,4 +82,4 @@ func apply_edit_brush(key: Vector3i) -> void:
 			_hex_map.toggle_cell_obstacle(key)
 
 	hex_map_changed.emit(_hex_map)
-	HexSignalManager.emit_hex_map_changed(_hex_map)
+	HexMapBus.emit_hex_map_changed(_hex_map)

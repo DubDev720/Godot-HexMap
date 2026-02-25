@@ -33,19 +33,9 @@ var _map_bounds_points: PackedVector3Array = PackedVector3Array()
 
 
 func _ready() -> void:
-	HexSignalManager.hex_selected.connect(_on_hex_selected)
-	HexSignalManager.hex_map_changed.connect(_on_map_changed)
-	HexSignalManager.camera_rotation_requested.connect(_on_rotation_requested)
-	HexSignalManager.camera_zoom_requested.connect(_on_zoom_requested)
-
-
-func _on_hex_selected(key: Vector3i) -> void:
-	var map = HexMapEditor.get_hex_map()
-	if map and map.has_cell(key):
-		_focus_world_pos = map.key_to_world(key)
-		var camera = get_viewport().get_camera_3d()
-		if camera:
-			apply_camera_transform(camera, _focus_world_pos, _map_bounds_points)
+	HexMapBus.hex_map_changed.connect(_on_map_changed)
+	HexCameraBus.camera_rotation_requested.connect(_on_rotation_requested)
+	HexCameraBus.camera_zoom_requested.connect(_on_zoom_requested)
 
 
 func _on_map_changed(map) -> void:
