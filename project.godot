@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 CameraController="*res://ui/camera_controller.gd"
 HexMapEditor="*res://hex_map/hex_map_utilities/hex_map_editor.gd"
 HexPathfinder="*res://hex_map/hex_map_utilities/hex_pathfinder.gd"
+HexSignalManager="*res://hex_map/hex_signal_manager.gd"
 
 [dotnet]
 

@@ -12,6 +12,8 @@ const INVALID_CELL_ITEM: int = -1
 const CELL_ITEM_DEFAULT: int = 0
 const CELL_ITEM_OBSTACLE: int = 1
 
+const HexSetScript = preload("res://hex_map/resources/hex_set.gd")
+
 
 class HexTierCoord:
 	var q: int
@@ -35,6 +37,8 @@ var _blank_cells: Dictionary = {}
 var _obstacle_cells: Dictionary = {}
 var _stack_used_cells: Dictionary = {}
 var _stack_obstacle_cells: Dictionary = {}
+var _hex_set: HexSet = null
+var _cell_data_ids: Dictionary = {}
 
 
 func configure(
@@ -47,7 +51,31 @@ func configure(
 	_layout = layout
 	_radius = maxi(radius, 0)
 	_tier_height = maxf(0.001, tier_height)
+	_cell_data_ids.clear()
 	_rebuild_cells(blank_cells, obstacle_cells)
+
+
+func configure_hex_set(hex_set: HexSet) -> void:
+	_hex_set = hex_set
+
+
+func get_hex_set() -> HexSet:
+	return _hex_set
+
+
+func get_layout() -> HexLib.Layout:
+	return _layout
+
+
+func get_tier_height() -> float:
+	return _tier_height
+
+
+func get_tile_data_for_cell(key: Vector3i) -> HexTileData:
+	if _hex_set == null:
+		return null
+	var tile_id = get_cell_item(key)
+	return _hex_set.get_tile_data(tile_id)
 
 
 func get_used_cells() -> Array[Vector3i]:
@@ -116,9 +144,11 @@ func set_cell_item(position: Vector3i, item: int, _orientation: int = 0) -> void
 	if not is_key_inside_radius(position):
 		return
 	if item < 0:
+		_cell_data_ids.erase(position)
 		erase_cell(position)
 		return
 	set_cell(position, true)
+	_cell_data_ids[position] = item
 	if item == CELL_ITEM_OBSTACLE:
 		set_cell_obstacle(position, true)
 	else:
@@ -128,6 +158,8 @@ func set_cell_item(position: Vector3i, item: int, _orientation: int = 0) -> void
 func get_cell_item(position: Vector3i) -> int:
 	if not has_cell(position):
 		return INVALID_CELL_ITEM
+	if _cell_data_ids.has(position):
+		return _cell_data_ids[position]
 	if is_cell_obstacle(position):
 		return CELL_ITEM_OBSTACLE
 	return CELL_ITEM_DEFAULT
@@ -147,6 +179,7 @@ func clear() -> void:
 	_obstacle_cells.clear()
 	_stack_used_cells.clear()
 	_stack_obstacle_cells.clear()
+	_cell_data_ids.clear()
 
 
 func set_cell_item_qrs(hex: HexLib.Hex, item: int, orientation: int = 0) -> void:
@@ -322,6 +355,7 @@ func _rebuild_cells(blank_cells: Array[Vector3i], obstacle_cells: Array[Vector3i
 	_obstacle_cells.clear()
 	_stack_used_cells.clear()
 	_stack_obstacle_cells.clear()
+	_cell_data_ids.clear()
 
 	for key in blank_cells:
 		_blank_cells[key] = true
@@ -332,10 +366,12 @@ func _rebuild_cells(blank_cells: Array[Vector3i], obstacle_cells: Array[Vector3i
 		if _blank_cells.has(key):
 			continue
 		_used_cells[key] = true
+		_cell_data_ids[key] = CELL_ITEM_DEFAULT
 
 	for key in obstacle_cells:
 		if _used_cells.has(key):
 			_obstacle_cells[key] = true
+			_cell_data_ids[key] = CELL_ITEM_OBSTACLE
 
 
 func _vector4_to_stack_key(position: Vector4) -> Vector4i:
@@ -358,3 +394,127 @@ func _tier_to_stack_key(coord: HexTierCoord) -> Vector4i:
 
 func _hex_to_key(hex: HexLib.Hex) -> Vector3i:
 	return Vector3i(hex.q, hex.r, hex.s)
+
+
+var _multimesh_nodes: Dictionary = {}
+
+
+func update_visuals(parent_node: Node3D) -> void:
+	_clear_multimesh_nodes()
+	if _hex_set == null:
+		return
+	
+	var groups: Dictionary = {}
+	for key in _cell_data_ids:
+		var id = _cell_data_ids[key]
+		if not groups.has(id):
+			groups[id] = []
+		groups[id].append(key)
+		
+	for tile_id in groups:
+		_create_multimesh_for_tile(tile_id, groups[tile_id], parent_node)
+
+
+func _create_multimesh_for_tile(id: int, coordinates: Array, parent: Node3D) -> void:
+	var data: HexTileData = _hex_set.get_tile_data(id)
+	if data == null or data.mesh == null:
+		return
+	
+	var mm_instance = MultiMeshInstance3D.new()
+	var mm = MultiMesh.new()
+	
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = data.mesh
+	mm.instance_count = coordinates.size()
+	
+	for i in range(coordinates.size()):
+		var key = coordinates[i]
+		var world_pos = key_to_world(key)
+		var basis = Basis()
+		mm.set_instance_transform(i, Transform3D(basis, world_pos))
+	
+	mm_instance.multimesh = mm
+	if data.material_override != null:
+		mm_instance.material_override = data.material_override
+	parent.add_child(mm_instance)
+	_multimesh_nodes[id] = mm_instance
+
+
+func _clear_multimesh_nodes() -> void:
+	for node in _multimesh_nodes.values():
+		if is_instance_valid(node):
+			node.queue_free()
+	_multimesh_nodes.clear()
+
+
+var _collision_bodies: Dictionary = {}
+var _collision_parent: Node3D = null
+
+
+func update_collisions(parent_node: Node3D, collision_enabled: bool) -> void:
+	_collision_parent = parent_node
+	_clear_collision_bodies()
+	
+	if not collision_enabled:
+		return
+	
+	for key in _cell_data_ids:
+		_update_collision_for_cell(key, _cell_data_ids[key])
+
+
+func _update_collision_for_cell(key: Vector3i, tile_id: int) -> void:
+	if _collision_parent == null:
+		return
+	if tile_id == INVALID_CELL_ITEM:
+		return
+	
+	if _collision_bodies.has(key):
+		_collision_bodies[key].queue_free()
+		_collision_bodies.erase(key)
+	
+	if _hex_set == null:
+		return
+	
+	var data: HexTileData = _hex_set.get_tile_data(tile_id)
+	if data == null:
+		return
+	
+	var body := StaticBody3D.new()
+	body.position = key_to_world(key)
+	
+	var collision_shape := CollisionShape3D.new()
+	
+	if data.metadata.has("custom_collision"):
+		collision_shape.shape = data.metadata["custom_collision"]
+	else:
+		collision_shape.shape = _generate_hex_collision_shape()
+	
+	body.add_child(collision_shape)
+	_collision_parent.add_child(body)
+	_collision_bodies[key] = body
+
+
+func _generate_hex_collision_shape() -> ConvexPolygonShape3D:
+	var shape := ConvexPolygonShape3D.new()
+	var points := PackedVector3Array()
+	
+	if _layout == null:
+		shape.set_points(points)
+		return shape
+	
+	var corners = HexLib.polygon_corners(_layout, HexLib.Hex.new(0, 0, 0))
+	
+	for p in corners:
+		points.append(Vector3(p.x, _tier_height * 0.5, p.y))
+	for p in corners:
+		points.append(Vector3(p.x, -_tier_height * 0.5, p.y))
+	
+	shape.set_points(points)
+	return shape
+
+
+func _clear_collision_bodies() -> void:
+	for body in _collision_bodies.values():
+		if is_instance_valid(body):
+			body.queue_free()
+	_collision_bodies.clear()

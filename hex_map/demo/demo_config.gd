@@ -1,6 +1,7 @@
 class_name DemoConfig
 extends Resource
 
+@export var show_legacy_labels: bool = false
 @export var tile_height: float = 0.25
 @export var hex_size: float = 1.0
 @export var demo_radius: int = 10

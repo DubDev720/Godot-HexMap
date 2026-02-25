@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3 uid="uid://hex_ui_manager"]
+
+[ext_resource type="Script" path="res://hex_map/ui/hex_ui_manager.gd" id="1_uimanager"]
+[ext_resource type="PackedScene" uid="uid://inspect_hud" path="res://hex_map/ui/inspect_hud.tscn" id="2_inspect"]
+[ext_resource type="PackedScene" uid="uid://paint_toolbar" path="res://hex_map/ui/paint_toolbar.tscn" id="3_paint"]
+[ext_resource type="PackedScene" uid="uid://tactics_hud" path="res://hex_map/ui/tactics_hud.tscn" id="4_tactics"]
+
+[node name="HexUIManager" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_uimanager")
+
+[node name="InspectHUD" parent="." instance=ExtResource("2_inspect")]
+
+[node name="PaintToolbar" parent="." instance=ExtResource("3_paint")]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 420.0
+offset_bottom = 170.0
+
+[node name="TacticsHUD" parent="." instance=ExtResource("4_tactics")]
