@@ -69,14 +69,19 @@ func _emit_path_query() -> void:
 	if map == null:
 		return
 
+	var request_is_emitted: bool = false
 	if map.is_walkable(_path_start_key) and map.is_walkable(_path_goal_key):
 		_last_path_start_key = _path_start_key
 		_last_path_goal_key = _path_goal_key
 		_request_path(_path_start_key, _path_goal_key, map)
+		request_is_emitted = true
 
 	_path_start_key = INVALID_KEY
 	_path_goal_key = INVALID_KEY
-	_sync_pending_path_selection()
+	if request_is_emitted:
+		_sync_last_path_selection()
+	else:
+		_sync_pending_path_selection()
 
 
 func _on_replay_pressed() -> void:
@@ -131,6 +136,12 @@ func _sync_pending_path_selection() -> void:
 	var logic_service = get_tree().get_first_node_in_group("logic_service")
 	if logic_service != null and logic_service.has_method("set_pending_path_selection"):
 		logic_service.set_pending_path_selection(_path_start_key, _path_goal_key)
+
+
+func _sync_last_path_selection() -> void:
+	var logic_service = get_tree().get_first_node_in_group("logic_service")
+	if logic_service != null and logic_service.has_method("set_pending_path_selection"):
+		logic_service.set_pending_path_selection(_last_path_start_key, _last_path_goal_key)
 
 
 func _on_animate_toggled(enabled: bool) -> void:

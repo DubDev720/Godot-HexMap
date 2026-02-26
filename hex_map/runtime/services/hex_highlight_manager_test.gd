@@ -10,6 +10,7 @@ class_name HexHighlightManagerTest
 
 const DemoConfigResource: DemoConfigPathfinderSwap = preload("res://hex_map/demo/demo_config_pathfinder_swap.tres")
 const HexPathTubeBuilderScript: Script = preload("res://hex_map/gameplay/services/hex_path_tube_builder.gd")
+const INVALID_KEY: Vector3i = Vector3i(2147483647, 2147483647, 2147483647)
 
 @export var selection_color: Color = Color(1.0, 0.95, 0.2, 0.45)
 @export var path_color: Color = Color(1.0, 0.93, 0.08, 0.95)
@@ -24,6 +25,10 @@ var _layout: HexLib.Layout = null
 var _tile_height: float = 0.25
 var _path_line_y_offset: float = 0.195
 var _path_tube_builder = null
+var _active_start_key: Vector3i = INVALID_KEY
+var _active_goal_key: Vector3i = INVALID_KEY
+var _active_start_material: Material = null
+var _active_goal_material: Material = null
 
 
 func _ready() -> void:
@@ -81,6 +86,23 @@ func _connect_signals() -> void:
 	if HexModeBus.interaction_mode_changed.is_connected(_on_mode_changed):
 		HexModeBus.interaction_mode_changed.disconnect(_on_mode_changed)
 	HexModeBus.interaction_mode_changed.connect(_on_mode_changed)
+	_connect_logic_service_signals()
+
+
+func _connect_logic_service_signals() -> void:
+	var logic_service := get_tree().get_first_node_in_group("logic_service")
+	if logic_service == null:
+		return
+	if logic_service.has_signal("simulation_updated"):
+		var sim_cb := Callable(self, "_on_logic_state_updated")
+		if logic_service.is_connected("simulation_updated", sim_cb):
+			logic_service.disconnect("simulation_updated", sim_cb)
+		logic_service.connect("simulation_updated", sim_cb)
+	if logic_service.has_signal("path_animation_updated"):
+		var anim_cb := Callable(self, "_on_logic_state_updated")
+		if logic_service.is_connected("path_animation_updated", anim_cb):
+			logic_service.disconnect("path_animation_updated", anim_cb)
+		logic_service.connect("path_animation_updated", anim_cb)
 
 
 func _get_active_pathfinder() -> Node:
@@ -304,6 +326,10 @@ func _update_path_markers(start_key: Vector3i, goal_key: Vector3i, result: Dicti
 		_hide_overlay(_goal_tile_overlay)
 		_start_tile_overlay = null
 		_goal_tile_overlay = null
+		_active_start_key = INVALID_KEY
+		_active_goal_key = INVALID_KEY
+		_active_start_material = null
+		_active_goal_material = null
 		return
 
 	var start_mat: Material = result.get("path_start_marker_material", null)
@@ -325,6 +351,8 @@ func _update_path_markers(start_key: Vector3i, goal_key: Vector3i, result: Dicti
 			goal_mat = _build_fallback_marker_material(Color(0.75, 0.1, 0.95, 1.0))
 
 	if map.has_cell(start_key):
+		_active_start_key = start_key
+		_active_start_material = start_mat
 		var start_overlay := _resolve_tile_overlay(start_key)
 		if _start_tile_overlay != start_overlay:
 			_hide_overlay(_start_tile_overlay)
@@ -335,8 +363,12 @@ func _update_path_markers(start_key: Vector3i, goal_key: Vector3i, result: Dicti
 	else:
 		_hide_overlay(_start_tile_overlay)
 		_start_tile_overlay = null
+		_active_start_key = INVALID_KEY
+		_active_start_material = null
 
 	if map.has_cell(goal_key):
+		_active_goal_key = goal_key
+		_active_goal_material = goal_mat
 		var goal_overlay := _resolve_tile_overlay(goal_key)
 		if _goal_tile_overlay != goal_overlay:
 			_hide_overlay(_goal_tile_overlay)
@@ -347,6 +379,26 @@ func _update_path_markers(start_key: Vector3i, goal_key: Vector3i, result: Dicti
 	else:
 		_hide_overlay(_goal_tile_overlay)
 		_goal_tile_overlay = null
+		_active_goal_key = INVALID_KEY
+		_active_goal_material = null
+
+
+func _on_logic_state_updated() -> void:
+	var map = HexMapEditor.get_hex_map()
+	if map == null:
+		return
+	if _active_start_key != INVALID_KEY and map.has_cell(_active_start_key):
+		var start_overlay := _resolve_tile_overlay(_active_start_key)
+		if start_overlay != null:
+			start_overlay.material_override = _active_start_material
+			start_overlay.visible = true
+			_start_tile_overlay = start_overlay
+	if _active_goal_key != INVALID_KEY and map.has_cell(_active_goal_key):
+		var goal_overlay := _resolve_tile_overlay(_active_goal_key)
+		if goal_overlay != null:
+			goal_overlay.material_override = _active_goal_material
+			goal_overlay.visible = true
+			_goal_tile_overlay = goal_overlay
 
 
 func _resolve_tile_overlay(key: Vector3i) -> MeshInstance3D:
@@ -386,6 +438,10 @@ func clear_path() -> void:
 	_hide_overlay(_goal_tile_overlay)
 	_start_tile_overlay = null
 	_goal_tile_overlay = null
+	_active_start_key = INVALID_KEY
+	_active_goal_key = INVALID_KEY
+	_active_start_material = null
+	_active_goal_material = null
 
 
 func clear_selection() -> void:

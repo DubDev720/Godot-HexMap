@@ -4,10 +4,10 @@
 
 [resource]
 script = ExtResource("1_map_cfg")
-tile_height = 0.5
-hex_size = 0.5
+tile_height = 1.0
+hex_size = 2.0
 demo_radius = 8
 tier_height = 3.0
-inactive_tile_color = Color(0.23041025, 0.40654722, 0.3184861, 1)
+inactive_tile_color = Color(0.6069981, 0.84273505, 0.715156, 1)
 active_tile_color = Color(0.77826107, 0.4522618, 1.92523e-07, 1)
 obstacle_tile_color = Color(0.25, 0, 0, 1)
