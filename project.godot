@@ -17,22 +17,32 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-CameraController="*res://ui/camera_controller.gd"
-HexMapEditor="*res://hex_map/hex_map_utilities/hex_map_editor.gd"
-HexPathfinder="*res://hex_map/hex_map_utilities/hex_pathfinder.gd"
-HexInteractionBus="*res://hex_map/signals/hex_interaction_bus.gd"
-HexCameraBus="*res://hex_map/signals/hex_camera_bus.gd"
-HexModeBus="*res://hex_map/signals/hex_mode_bus.gd"
-HexMapBus="*res://hex_map/signals/hex_map_bus.gd"
+CameraController="*res://hex_map/presentation/camera/camera_controller.gd"
+HexMapEditor="*res://hex_map/editor/services/hex_map_editor.gd"
+HexPathfinder="*res://hex_map/gameplay/services/hex_pathfinder.gd"
+HexPathfinderMaterial="*res://hex_map/gameplay/services/hex_pathfinder_material.gd"
+HexInteractionBus="*res://hex_map/runtime/buses/hex_interaction_bus.gd"
+HexCameraBus="*res://hex_map/runtime/buses/hex_camera_bus.gd"
+HexModeBus="*res://hex_map/runtime/buses/hex_mode_bus.gd"
+HexMapBus="*res://hex_map/runtime/buses/hex_map_bus.gd"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
 
 [dotnet]
 
 project/assembly_name="TacForge"
+project/assembly_reload_attempts=1
 
-[physics]
+[importer_defaults]
 
-3d/physics_engine="Jolt Physics"
+animation_library={
+&"blender/meshes/colors": true
+}
 
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+occlusion_culling/use_occlusion_culling=true

@@ -8,7 +8,7 @@ extends Node3D
 ## Timestamp: 2026-02-23 11:56:00 UTC
 
 const HexLibScript = preload("res://hex_map/core/math/hex_lib.gd")
-const DEMO_CONFIG: DemoConfig = preload("res://hex_map/demo/demo_config.tres")
+const DEMO_CONFIG: DemoConfigPathfinderSwap = preload("res://hex_map/demo/demo_config_pathfinder_swap.tres")
 
 signal zoom_step_is_requested(zoom_in_is_requested: bool)
 signal map_configure_is_requested(layout: HexLib.Layout, radius: int, blank_coords: Array[Vector3i], obstacle_coords: Array[Vector3i], tier_height: float)
@@ -63,16 +63,17 @@ var _input_controller: Node3D = null
 var _logic_service: Node = null
 
 const SelectionTooltipScene = preload("res://hex_map/presentation/ui/selection_tooltip.tscn")
-const HexUIManagerScene = preload("res://hex_map/presentation/ui/hex_ui_manager.tscn")
+const HexUIManagerScene = preload("res://hex_map/presentation/ui/hex_ui_manager_test.tscn")
 const HexMapRendererScript = preload("res://hex_map/runtime/rendering/hex_map_renderer_3d.gd")
-const HexHighlightManagerScript = preload("res://hex_map/runtime/services/hex_highlight_manager.gd")
+const HexHighlightManagerScript = preload("res://hex_map/runtime/services/hex_highlight_manager_test.gd")
 const HexInputControllerScript = preload("res://hex_map/runtime/services/hex_input_controller.gd")
-const HexMapLogicServiceScript = preload("res://hex_map/runtime/services/hex_map_logic_service.gd")
+const HexMapLogicServiceScript = preload("res://hex_map/runtime/services/hex_map_logic_service_test.gd")
 const HexRuntimeCommandBusScript = preload("res://hex_map/runtime/event_law/hex_runtime_command_bus.gd")
 const HexRuntimeEventBusScript = preload("res://hex_map/runtime/event_law/hex_runtime_event_bus.gd")
 const HexRuntimeStateServiceScript = preload("res://hex_map/runtime/event_law/hex_runtime_state_service.gd")
 const HexRuntimeProjectionCoordinatorScript = preload("res://hex_map/runtime/event_law/hex_runtime_projection_coordinator.gd")
 const MapConfigSchemaScript = preload("res://hex_map/core/config/map_config_schema.gd")
+const MaterialPathfinderScript: Script = preload("res://hex_map/gameplay/services/hex_pathfinder_material.gd")
 
 var _runtime_command_bus: Node = null
 var _runtime_event_bus: Node = null
@@ -82,6 +83,7 @@ var _runtime_projection_coordinator: Node = null
 
 func _ready() -> void:
 	_fit_window_to_screen()
+	_configure_selected_pathfinder()
 	map_configure_is_requested.connect(HexMapEditor.configure_hex_map)
 	map_edit_brush_set_is_requested.connect(HexMapEditor.set_edit_brush)
 	HexMapEditor.hex_map_changed.connect(_on_hex_map_changed)
@@ -97,6 +99,19 @@ func _ready() -> void:
 	_ensure_scene_systems_from_config()
 	_refresh_runtime_system_snapshots()
 	_refresh_controls_panel()
+
+
+func _configure_selected_pathfinder() -> void:
+	var swap_config := DEMO_CONFIG
+	if swap_config.pathfinding_utility_script == null:
+		return
+	if swap_config.pathfinding_utility_script != MaterialPathfinderScript:
+		return
+	var material_pathfinder := get_node_or_null("/root/HexPathfinderMaterial")
+	if material_pathfinder == null:
+		return
+	if swap_config.material_pathfinding_config != null and material_pathfinder.has_method("set_pathfinding_config"):
+		material_pathfinder.set_pathfinding_config(swap_config.material_pathfinding_config)
 
 
 func _process(delta: float) -> void:

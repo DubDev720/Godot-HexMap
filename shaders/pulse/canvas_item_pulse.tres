@@ -1,0 +1,56 @@
+[gd_resource type="VisualShader" format=3]
+
+[sub_resource type="VisualShaderNodeGlobalExpression" id="VisualShaderNodeGlobalExpression_3avo4"]
+expression = "
+uniform vec4 base_color : source_color = vec4(0.1, 0.2, 0.8, 1.0);
+uniform vec4 pulse_color : source_color = vec4(1.0, 0.3, 0.2, 1.0);
+uniform float blend_ratio : hint_range(0.0, 1.0) = 0.5;
+uniform float pulse_strength : hint_range(0.0, 1.0) = 1.0;
+uniform vec2 axis_dir = vec2(1.0, 0.0);
+uniform float axis_frequency : hint_range(0.1, 50.0) = 8.0;
+uniform float pulse_speed : hint_range(0.0, 20.0) = 2.0;
+"
+
+[sub_resource type="VisualShaderNodeExpression" id="VisualShaderNodeExpression_13tby"]
+expression = "
+vec2 dir = normalize(axis_dir);
+float axis_pos = dot(UV, dir);
+float wave = 0.5 + 0.5 * sin(axis_pos * axis_frequency * TAU + TIME * pulse_speed);
+float t = clamp(blend_ratio + (wave - 0.5) * pulse_strength, 0.0, 1.0);
+vec4 c = mix(base_color, pulse_color, t);
+color_rgb = c.rgb;
+alpha = c.a;
+"
+
+[resource]
+mode = 1
+flags/light_only = false
+nodes/fragment/2/node = SubResource("VisualShaderNodeGlobalExpression_3avo4")
+nodes/fragment/2/position = Vector2(-620, -220)
+nodes/fragment/2/size = Vector2(0, 0)
+nodes/fragment/2/input_ports = ""
+nodes/fragment/2/output_ports = ""
+nodes/fragment/2/expression = "
+uniform vec4 base_color : source_color = vec4(0.1, 0.2, 0.8, 1.0);
+uniform vec4 pulse_color : source_color = vec4(1.0, 0.3, 0.2, 1.0);
+uniform float blend_ratio : hint_range(0.0, 1.0) = 0.5;
+uniform float pulse_strength : hint_range(0.0, 1.0) = 1.0;
+uniform vec2 axis_dir = vec2(1.0, 0.0);
+uniform float axis_frequency : hint_range(0.1, 50.0) = 8.0;
+uniform float pulse_speed : hint_range(0.0, 20.0) = 2.0;
+"
+nodes/fragment/3/node = SubResource("VisualShaderNodeExpression_13tby")
+nodes/fragment/3/position = Vector2(-220, -40)
+nodes/fragment/3/size = Vector2(0, 0)
+nodes/fragment/3/input_ports = ""
+nodes/fragment/3/output_ports = "0,4,color_rgb;1,0,alpha;"
+nodes/fragment/3/expression = "
+vec2 dir = normalize(axis_dir);
+float axis_pos = dot(UV, dir);
+float wave = 0.5 + 0.5 * sin(axis_pos * axis_frequency * TAU + TIME * pulse_speed);
+float t = clamp(blend_ratio + (wave - 0.5) * pulse_strength, 0.0, 1.0);
+vec4 c = mix(base_color, pulse_color, t);
+color_rgb = c.rgb;
+alpha = c.a;
+"
+nodes/fragment/connections = PackedInt32Array(3, 0, 0, 0, 3, 1, 0, 1)

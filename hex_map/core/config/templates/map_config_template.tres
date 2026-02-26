@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MapConfigSchema" format=3 uid="uid://c00mwkcepuupj"]
+
+[ext_resource type="Script" uid="uid://b34uydptm0trh" path="res://hex_map/core/config/map_config_schema.gd" id="1_map_cfg"]
+
+[resource]
+script = ExtResource("1_map_cfg")
+tile_height = 0.5
+hex_size = 0.5
+demo_radius = 8
+tier_height = 3.0
+inactive_tile_color = Color(0.23041025, 0.40654722, 0.3184861, 1)
+active_tile_color = Color(0.77826107, 0.4522618, 1.92523e-07, 1)
+obstacle_tile_color = Color(0.25, 0, 0, 1)

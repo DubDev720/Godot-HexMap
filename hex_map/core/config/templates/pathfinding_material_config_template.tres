@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="PathfindingMaterialConfigSchema" format=3 uid="uid://gtno8bvo67u8"]
+
+[ext_resource type="Script" uid="uid://dlgbsm8dno4ap" path="res://hex_map/core/config/pathfinding_material_config_schema.gd" id="1_path_cfg"]
+[ext_resource type="Shader" uid="uid://dlw413pn661ui" path="res://shaders/pulse/spatial_pulse_local_axis.tres" id="2_path_shader"]
+[ext_resource type="Material" path="res://hex_map/core/config/templates/path_goal_marker_material.tres" id="3_goal_plane_mat"]
+[ext_resource type="Material" path="res://hex_map/core/config/templates/path_start_marker_material.tres" id="3_mhpw7"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_goal_cone_current"]
+transparency = 1
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(2.3848598, 2.3848603, 0, 0.848)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_path_ribbon"]
+resource_local_to_scene = true
+render_priority = 0
+shader = ExtResource("2_path_shader")
+shader_parameter/base_color = Color(0, 0, 0, 0)
+shader_parameter/pulse_color = Color(1.8837943, 1.8837943, 0, 1)
+shader_parameter/blend_ratio = 0.2290000108775
+shader_parameter/pulse_strength = 1.0
+shader_parameter/local_axis_dir = Vector3(1, 1, 0)
+shader_parameter/axis_frequency = 0.10000000149012
+shader_parameter/pulse_speed = 3.0000001425
+shader_parameter/emissive_strength = 0.0
+
+[resource]
+script = ExtResource("1_path_cfg")
+path_line_width = 0.25
+path_ribbon_material = SubResource("ShaderMaterial_path_ribbon")
+path_start_marker_material = ExtResource("3_mhpw7")
+path_goal_marker_material = ExtResource("3_goal_plane_mat")
+path_goal_cone_material = SubResource("StandardMaterial3D_goal_cone_current")

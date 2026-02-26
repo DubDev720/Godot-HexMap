@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="DemoConfigPathfinderSwap" format=3 uid="uid://b8m1i53ysy17f"]
+
+[ext_resource type="Script" uid="uid://urbc13s7rsjx" path="res://hex_map/demo/demo_config_pathfinder_swap.gd" id="1_demo_cfg"]
+[ext_resource type="Resource" path="res://hex_map/core/config/templates/map_config_template.tres" id="2_map_cfg"]
+[ext_resource type="Resource" uid="uid://ch1vccac16s12" path="res://hex_map/core/config/templates/pathfinding_config_template.tres" id="4_bfcmr"]
+[ext_resource type="Script" uid="uid://c7kcsp5ugjdax" path="res://hex_map/gameplay/services/hex_pathfinder_material.gd" id="4_selected_pathfinder"]
+[ext_resource type="Script" uid="uid://ls7rv54qkuib" path="res://hex_map/gameplay/services/hex_pathfinder.gd" id="5_legacy_pathfinder"]
+[ext_resource type="Resource" uid="uid://gtno8bvo67u8" path="res://hex_map/core/config/templates/pathfinding_material_config_template.tres" id="6_material_cfg"]
+
+[resource]
+script = ExtResource("1_demo_cfg")
+pathfinding_utility_script = ExtResource("4_selected_pathfinder")
+alternate_pathfinding_utility_script = ExtResource("5_legacy_pathfinder")
+runtime_command_pipeline_is_enabled = false

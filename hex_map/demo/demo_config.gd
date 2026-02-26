@@ -8,8 +8,8 @@ extends Resource
 ## Break Risks: Missing schema resources block map generation or path visualization defaults.
 ## Timestamp: 2026-02-25 00:00:00 EST
 
-const MapConfigTemplate = preload("res://hex_map/config/templates/map_config_template.tres")
-const PathfindingConfigTemplate = preload("res://hex_map/config/templates/pathfinding_config_template.tres")
+const MapConfigTemplate = preload("res://hex_map/core/config/templates/map_config_template.tres")
+const PathfindingConfigTemplate = preload("res://hex_map/core/config/templates/pathfinding_config_template.tres")
 
 @export var runtime_interface_is_enabled: bool = true
 @export var editor_tool_interface_is_enabled: bool = true

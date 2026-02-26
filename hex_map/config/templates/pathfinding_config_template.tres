@@ -1,7 +1,0 @@
-[gd_resource type="Resource" script_class="PathfindingConfigSchema" format=3 uid="uid://ch1vccac16s12"]
-
-[ext_resource type="Script" uid="uid://d3qk82l77ndkx" path="res://hex_map/config/pathfinding_config_schema.gd" id="1_path_cfg"]
-
-[resource]
-script = ExtResource("1_path_cfg")
-path_line_color = Color(0.9089101, 0.083599366, 1.92523e-07, 0.9490196)

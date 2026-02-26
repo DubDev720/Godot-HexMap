@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dgguc5c203goq"]
+
+[ext_resource type="Script" uid="uid://c4jawmm3qufll" path="res://hex_map/demo/hex_demo_test.gd" id="1_r05uu"]
+
+[node name="HexDemo" type="Node3D" unique_id=806884296]
+script = ExtResource("1_r05uu")

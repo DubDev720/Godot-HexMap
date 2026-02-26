@@ -1,8 +1,8 @@
-ion[gd_resource type="Resource" script_class="DemoConfig" load_steps=4 format=3]
+[gd_resource type="Resource" script_class="DemoConfig" load_steps=4 format=3 uid="uid://cbw0i6n8xn008"]
 
-[ext_resource type="Script" path="res://hex_map/demo/demo_config.gd" id="1_demo_cfg"]
-[ext_resource type="Resource" path="res://hex_map/config/templates/map_config_template.tres" id="2_map_cfg"]
-[ext_resource type="Resource" path="res://hex_map/config/templates/pathfinding_config_template.tres" id="3_path_cfg"]
+[ext_resource type="Script" uid="uid://bhuegsu8jgtl2" path="res://hex_map/demo/demo_config.gd" id="1_demo_cfg"]
+[ext_resource type="Resource" path="res://hex_map/core/config/templates/map_config_template.tres" id="2_map_cfg"]
+[ext_resource type="Resource" path="res://hex_map/core/config/templates/pathfinding_config_template.tres" id="3_path_cfg"]
 
 [resource]
 script = ExtResource("1_demo_cfg")

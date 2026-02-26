@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://62f2nka7yx2o"]
+
+[ext_resource type="Script" uid="uid://b0tlrcucnghqv" path="res://hex_map/presentation/ui/tactics_hud_test.gd" id="1_tactics"]
+
+[node name="TacticsHUD" type="Control" unique_id=1044050971]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 420.0
+offset_bottom = 170.0
+mouse_filter = 1
+script = ExtResource("1_tactics")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1009448304]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 412.0
+offset_bottom = 162.0
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1318162939]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AnimateToggle" type="CheckButton" parent="MarginContainer/VBoxContainer" unique_id=1203166393]
+layout_mode = 2
+button_pressed = true
+text = "Animate Pathfinding"
+
+[node name="ReplayButton" type="Button" parent="MarginContainer/VBoxContainer" unique_id=73825040]
+layout_mode = 2
+text = "Replay Last Path"
+
+[node name="SpeedLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1628561436]
+layout_mode = 2
+text = "Animation Step Time"
+
+[node name="SpeedSlider" type="HSlider" parent="MarginContainer/VBoxContainer" unique_id=1719027526]
+layout_mode = 2
+min_value = 0.005
+max_value = 0.25
+step = 0.005
+value = 0.030000000000000002
+
+[node name="Hint" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1685770379]
+layout_mode = 2
+text = "Select start then goal in tactics mode"
+autowrap_mode = 3
